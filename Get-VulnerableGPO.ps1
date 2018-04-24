@@ -73,88 +73,110 @@ function Get-VulnerableGPO
         #first process the security CSE GPOs
         foreach ($foundGPO in $secGPOs)
         {
+            #now check to see if the GPO has vulnerable delegation, which means Authn Users, Read or ReadApply--otherwise we don't care
+            if ($foundGPO.Attributes -eq $null)
+            {
+                continue
+            }
+            $perms = Get-SDMGPOSecurity -DisplayName $foundGPO.Attributes["displayName"][0] -Domain $Domain
+            [bool]$found = $false
+            foreach ($ACE in $perms)
+            {
+                if ($ACE.Trustee -eq "NT AUTHORITY\Authenticated Users" -and ($ACE.Permission -eq "permGPOApply" -or $ACE.Permission -eq "permGPORead"))
+                {
+                    $found = $true
+                    break
+                }
+                
+            }
+            if ($found -eq $false)
+            {
+                continue
+            }
             $object = New-Object PSObject
             Add-Member -InputObject $object -MemberType NoteProperty -Name GPOName -Value ""
             Add-Member -InputObject $object -MemberType NoteProperty -Name PolicyArea -Value ""
             Add-Member -InputObject $object -MemberType NoteProperty -Name Permission -Value ""
-            if ($foundGPO.Attributes -ne $null)
-            {
-                #generate settings for current GPO
-                $settings = Export-SDMGPSettings -DomainName $Domain -GpoNames $foundGPO.Attributes["displayName"][0] -PolicyAreas "Security"
-                #now search for our settings
-                foreach ($item in $settings)
-                {
-                    foreach ($area in $AreasPol.Keys)
-                    {
-                        if ($item.SettingPath -eq $area)
-                        {
-                            if ($object.PolicyArea -ne $AreasPol[$area]) #only add this one if we haven't found it already
-                            {
-                                 #now check to see if it has vulnerable delegation, which means Authn Users, Read or ReadApply
-                                $perms = Get-SDMGPOSecurity -DisplayName $foundGPO.Attributes["displayName"][0] -Domain $Domain
-                                foreach ($ACE in $perms)
-                                {
-                                    if ($ACE.Trustee -eq "NT AUTHORITY\Authenticated Users" -and ($ACE.Permission -eq "permGPOApply" -or $ACE.Permission -eq "permGPORead"))
-                                    {
-                                        $object.GPOName = $foundGPO.Attributes["displayName"][0]
-                                        $object.PolicyArea = $AreasPol[$area]
-                                        $object.Permission = "Authenticated Users"+":"+$ACE.Permission
-                                        $object
 
-                                        break
-                                    }
-                                }
-                            }
-                        
-                        
+            #generate settings for current GPO
+            $settings = Export-SDMGPSettings -DomainName $Domain -GpoNames $foundGPO.Attributes["displayName"][0] -PolicyAreas "Security"
+            #now search for our settings
+            foreach ($item in $settings)
+            {
+                foreach ($area in $AreasPol.Keys)
+                {
+                    if ($item.SettingPath -eq $area)
+                    {
+                        if ($object.PolicyArea -ne $AreasPol[$area]) #only add this one if we haven't found it already
+                        {
+                                
+                            
+                                    $object.GPOName = $foundGPO.Attributes["displayName"][0]
+                                    $object.PolicyArea = $AreasPol[$area]
+                                    $object.Permission = "Authenticated Users"+":"+$ACE.Permission
+                                    $object
+                                    break
+
                         }
-                    }
                     
+                    
+                    }
                 }
+                
             }
+            
 
             
         }
         # now process the LUGs settings
         foreach ($foundGPO in $lugsGPOs)
         {
+            if ($foundGPO.Attributes -eq $null)
+            {
+                continue
+            }
+            #now check to see if the GPO has vulnerable delegation, which means Authn Users, Read or ReadApply--otherwise we don't care
+            $perms = Get-SDMGPOSecurity -DisplayName $foundGPO.Attributes["displayName"][0] -Domain $Domain
+            [bool]$found = $false
+            foreach ($ACE in $perms)
+            {
+                if ($ACE.Trustee -eq "NT AUTHORITY\Authenticated Users" -and ($ACE.Permission -eq "permGPOApply" -or $ACE.Permission -eq "permGPORead"))
+                {
+                    $found = $true
+                    break
+                }
+                
+            }
             $object = New-Object PSObject
             Add-Member -InputObject $object -MemberType NoteProperty -Name GPOName -Value ""
             Add-Member -InputObject $object -MemberType NoteProperty -Name PolicyArea -Value ""
             Add-Member -InputObject $object -MemberType NoteProperty -Name Permission -Value ""
-            if ($foundGPO.Attributes -ne $null)
-            {
-                $settings = Export-SDMGPSettings -DomainName $Domain -GpoNames $foundGPO.Attributes["displayName"][0] -PolicyAreas "Local Users and Groups"
-                #now search for our settings
-                foreach ($item in $settings)
-                {
-                    foreach ($area in $AreasPref.Keys)
-                    {
-                        if ($item.SettingPath.Contains($area))
-                        {
-                            if ($object.PolicyArea -ne $AreasPref[$area]) #only add this one if we haven't found it already
-                            {
-                                #now check to see if it has vulnerable delegation
-                                $perms = Get-SDMGPOSecurity -DisplayName $foundGPO.Attributes["displayName"][0] -Domain $Domain
-                                foreach ($ACE in $perms)
-                                {
-                                    if ($ACE.Trustee -eq "NT AUTHORITY\Authenticated Users" -and ($ACE.Permission -eq "permGPOApply" -or $ACE.Permission -eq "permGPORead"))
-                                    {
-                                        $object.GPOName = $foundGPO.Attributes["displayName"][0]
-                                        $object.PolicyArea = $AreasPref[$area]
-                                        $object.Permission = "Authenticated Users"+":"+$ACE.Permission
-                                        $object
 
-                                        break
-                                    }
-                                }
-                            }
-                        
+            $settings = Export-SDMGPSettings -DomainName $Domain -GpoNames $foundGPO.Attributes["displayName"][0] -PolicyAreas "Local Users and Groups"
+            #now search for our settings
+            foreach ($item in $settings)
+            {
+                foreach ($area in $AreasPref.Keys)
+                {
+                    if ($item.SettingPath.Contains($area))
+                    {
+                        if ($object.PolicyArea -ne $AreasPref[$area]) #only add this one if we haven't found it already
+                        {
+                            
+                            $object.GPOName = $foundGPO.Attributes["displayName"][0]
+                            $object.PolicyArea = $AreasPref[$area]
+                            $object.Permission = "Authenticated Users"+":"+$ACE.Permission
+                            $object
+
+                            break
+
                         }
-                    }
                     
+                    }
                 }
+                
             }
+            
         }
                    
     }
