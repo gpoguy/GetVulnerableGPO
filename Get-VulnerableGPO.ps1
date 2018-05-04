@@ -36,17 +36,19 @@ function Get-VulnerableGPO
     
     Begin
     {
-        $startTime = [DateTime]::Now
-        $startTime
+        #$startTime = [DateTime]::Now
+        #$startTime
 
 
         if ($Domain -eq $null)
         {
             $Domain = $env:USERDNSDOMAIN
-        }   
+        } 
+        $DN = GetDN $Domain
+        $GPCContainer = "CN=Policies, CN=System, "+$DN
         #first, find the GPOs that contain security or GP Preferences Local Users and Groups by searching for the appropriate CSEs
-        $secGPOs =ADFind $Domain "displayName","gpcMachineExtensionNames" "CN=Policies,CN=System,DC=cpandl,DC=com" "OneLevel" "(&(objectClass=groupPolicyContainer)(gpcMachineExtensionNames=*{827D319E-6EAC-11D2-A4EA-00C04F79F83A}*))" 1000
-        $lugsGPOS = ADFind $Domain "displayName","gpcMachineExtensionNames" "CN=Policies,CN=System,DC=cpandl,DC=com" "OneLevel" "(&(objectClass=groupPolicyContainer)(gpcMachineExtensionNames=*{17D89FEC-5C44-4972-B12D-241CAEF74509}*))" 1000
+        $secGPOs =ADFind $Domain "displayName","gpcMachineExtensionNames" $GPCContainer "OneLevel" "(&(objectClass=groupPolicyContainer)(gpcMachineExtensionNames=*{827D319E-6EAC-11D2-A4EA-00C04F79F83A}*))" 1000
+        $lugsGPOS = ADFind $Domain "displayName","gpcMachineExtensionNames" $GPCContainer "OneLevel" "(&(objectClass=groupPolicyContainer)(gpcMachineExtensionNames=*{17D89FEC-5C44-4972-B12D-241CAEF74509}*))" 1000
     }
     Process
     {
@@ -182,8 +184,8 @@ function Get-VulnerableGPO
     }
     End
     {
-        $endTime = [DateTime]::Now
-        $endTime
+       # $endTime = [DateTime]::Now
+       # $endTime
         
     }
 }
@@ -227,4 +229,16 @@ function ADFind #using System.DS.Protocols to do LDAP searches of GPCs
      
     
 }
+
+function GetDN #calculates Distinguished Name 
+{
+    param(
+        [string]$dnsDomain
+    )
+    $domContext = New-Object System.DirectoryServices.ActiveDirectory.DirectoryContext([System.DirectoryServices.ActiveDirectory.DirectoryContextType]::Domain, $dnsDomain);
+    $selectedDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetDomain($domContext);
+    return $selectedDomain.GetDirectoryEntry().Properties["distinguishedName"][0].ToString();
+
+}
+
 Get-VulnerableGPO
