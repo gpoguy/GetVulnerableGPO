@@ -101,7 +101,7 @@ function Get-VulnerableGPO
             Add-Member -InputObject $object -MemberType NoteProperty -Name Permission -Value ""
 
             #generate settings for current GPO
-            $settings = Export-SDMGPSettings -DomainName $Domain -GpoNames $foundGPO.Attributes["displayName"][0] -PolicyAreas "Security"
+            $settings = Out-SDMGPSettings -DomainName $Domain -GpoNames $foundGPO.Attributes["displayName"][0] -PolicyAreas "Security"
             #now search for our settings
             foreach ($item in $settings)
             {
@@ -154,7 +154,7 @@ function Get-VulnerableGPO
             Add-Member -InputObject $object -MemberType NoteProperty -Name PolicyArea -Value ""
             Add-Member -InputObject $object -MemberType NoteProperty -Name Permission -Value ""
 
-            $settings = Export-SDMGPSettings -DomainName $Domain -GpoNames $foundGPO.Attributes["displayName"][0] -PolicyAreas "Local Users and Groups"
+            $settings = Out-SDMGPSettings -DomainName $Domain -GpoNames $foundGPO.Attributes["displayName"][0] -PolicyAreas "Local Users and Groups"
             #now search for our settings
             foreach ($item in $settings)
             {
